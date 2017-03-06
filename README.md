@@ -39,4 +39,4 @@ The **$ICU_DIR** is the root directory to place the project. You may want to cha
 $ cd $ICU_DIR/icu_build_android
 $ sh icu_build_android.sh
 ```
-Now you will find all the libs you need are on the directory **build_icu_andorid/lib**
+Now you will find all the libs you need on the directory **build_icu_andorid/lib**
