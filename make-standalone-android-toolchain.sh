@@ -1,0 +1,1 @@
+$NDK_ROOT/build/tools/make-standalone-toolchain.sh --platform=android-{VERSION} --install-dir={INSTALL_DIR} --toolchain=arm-linux-{TARGET_ARCH}-{VERSION} --stl=gnustl
