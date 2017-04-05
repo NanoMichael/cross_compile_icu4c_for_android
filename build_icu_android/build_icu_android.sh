@@ -1,16 +1,17 @@
-export ICU_SOURCES=/home/nano/icu_58/icu
+export ICU_SOURCES=/home/nano/projects/icu_58/icu
 export ANDROIDVER=22
 export AR=/usr/bin/ar
-export BASE=/home/nano/icu_58
+export BASE=/home/nano/projects/icu_58
 export HOST_ICU=$BASE/build_icu_android
 export ICU_CROSS_BUILD=$BASE/build_icu_linux
-export NDK_STANDARD_ROOT=/home/nano/android-14-toolchain
+export NDK_STANDARD_ROOT=/home/nano/android-toolchains/arm64-21
 export CPPFLAGS="-I$NDK_STANDARD_ROOT/sysroot/usr/include/ \
--O3 -fno-short-wchar -DU_USING_ICU_NAMESPACE=1 -fno-short-enums \
+-Os -fno-short-wchar -DU_USING_ICU_NAMESPACE=1 -fno-short-enums \
 -DU_HAVE_NL_LANGINFO_CODESET=0 -D__STDC_INT64__ -DU_TIMEZONE=0 \
--DUCONFIG_NO_LEGACY_CONVERSION=1"
+-DUCONFIG_NO_LEGACY_CONVERSION=1 \
+-ffunction-sections -fdata-sections -fvisibility=hidden"
 
-export LDFLAGS="-lc -lstdc++ -Wl,-rpath-link=$NDK_STANDARD_ROOT/sysroot/usr/lib/"
+export LDFLAGS="-lc -lstdc++ -Wl,--gc-sections,-rpath-link=$NDK_STANDARD_ROOT/sysroot/usr/lib/"
 
 export PATH=$PATH:$NDK_STANDARD_ROOT/bin
 

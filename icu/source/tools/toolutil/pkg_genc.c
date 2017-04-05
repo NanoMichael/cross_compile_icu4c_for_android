@@ -37,6 +37,11 @@
 #   define ICU_ENTRY_OFFSET 0
 #endif
 
+// FIXME for android above version 21
+#ifndef ELF64_ST_INFO
+#define ELF64_ST_INFO(bind,type) ((uint8_t)(((bind) << 4) | ((type) & 0xf)))
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "unicode/putil.h"
