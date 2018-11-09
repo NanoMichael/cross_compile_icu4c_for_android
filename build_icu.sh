@@ -37,6 +37,16 @@ buildHost() {
     cd $WORKING_DIR
 }
 
+checkInclude() {
+    ICU_INCLUDE=/usr/include/unicode
+    if [ ! -d $ICU_INCLUDE ]; then
+        echo "No icu includes found, copy..."
+        cp -r $HOST_BUILD/icu_build/include/unicode /usr/include
+    else
+        echo "Icu includes already exists."
+    fi
+}
+
 if [ -d $HOST_BUILD ]; then
     echo "Host build already exists, use this one."
 else
@@ -45,6 +55,8 @@ else
     cd $HOST_BUILD
     buildHost
 fi
+
+checkInclude
 
 ###################################### Make standalone-toolchain #################################
 
