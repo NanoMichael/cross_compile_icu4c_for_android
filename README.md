@@ -1,42 +1,40 @@
 # CROSS BUILD ICU FOR ANDROID
 
-This document shows how to cross compile icu for Android (for me, I use it to enable Chinese segmentation in SQLite3)
+This document shows how to cross compile icu for Android (I use it to enable Chinese segmentation in SQLite3).
 
-The directory **icu** contains the source code of icu4c (version 58.2.0), you can download and replace it with the version you want.
+The directory **icu** contains the source code of icu4c (version 58.2.0), you can replace it with the version you want.
 
-The directory **icu_build_linux** is for host building, and **icu_build_android** is for Android building.
+The directory **build** is the build result, **build/host** is the host build result, and **build/android/*arch*** is the target build result for Android, *arch* is the target arch you want to build.
 
-## MAKE STANDALONE ANDROID TOOLCHAIN
+# HOW TO USE
 
-The script **make-standalone-android-toolchain.sh** is used to generate *standalone-toolchain*, you can type the script following on your terminate:
+Just run the following commands:
 
-```shell
-$ $NDK_ROOT/build/tools/make-standalone-toolchain.sh --platform=android-{PLATFORM_VERSION} \
---install-dir={INSTALL_DIR} --toolchain=arm-linux-{TARGET_ARCH}-{TOOLCHAIN_VERSION} --stl=gnustl
+```sh
+$ chmod +x build_icu.sh
+$ ./build_icu.sh <NDK_DIR> <TARGET_ARCH>
 ```
 
-* The PLATFORM_VERSION is the Android platform you want to use, 14 is recommended
-* The INSTALL_DIR specifies where to install the standalone toolchain
-* The TARGET_ARCH specifies what arch you want to build
-* The TOOLCHAIN_VERSION is the version of your ndk-toolchain
+**NDK_DIR** is your NDK toolchain directory, and **TARGET_ARCH** is the target arch you want to build, current support *arm* and *arm64*.
 
-After the standalone-toolchain is generated, you should replace the toolchain location in script **build_icu_android.sh** to make it work properly.
+You can find the libs builded in directory **build/andorid/arch/lib**.
 
-# BUILD FOR HOST
+# LICENSE
 
-Cross-buiding ICU requires to build it first for the system where the cross-build is run, then for target system.
-The Linux system is recomended.
+This project is under the [Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
-```shell
-$ cd $ICU_DIR/icu_build_linux
-$ sh icu_build_linux.sh
 ```
-The **$ICU_DIR** is the root directory to place the project. You may want to change the variables and build options in the building script according to your needs.
+Copyright 2018 Nano Michael
 
-# BUILD FOR ANDROID
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-```shell
-$ cd $ICU_DIR/icu_build_android
-$ sh icu_build_android.sh
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```
-Now you will find all the libs you need on the directory **build_icu_andorid/lib**

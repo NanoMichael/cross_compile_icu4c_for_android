@@ -2,11 +2,15 @@
 
 # CROSS BUILD ICU FOR ANDROID
 # usage:
-# ./build_icu.sh <NDK_DIR> <ARCH>
+# ./build_icu.sh <NDK_DIR> [ARCH]
+# [ARCH] is one of the 'arm' or 'arm64', default is 'arm'
+
+ERR_COLOR='\033[1;31m'
+WARNING_COLOR='\033[1;33m'
+NO_COLOR='\033[0m'
 
 WORKING_DIR=`pwd`
 
-# Build
 BUILD_DIR=$WORKING_DIR/build
 if [ ! -d "$BUILD_DIR" ]; then
     mkdir $BUILD_DIR
@@ -61,14 +65,18 @@ checkInclude
 ###################################### Make standalone-toolchain #################################
 
 NDK_DIR=$1
+if [ -z $NDK_DIR ]; then
+    echo -e "${ERR_COLOR}NDK not specified, exit.${NO_COLOR}"
+    exit 1
+fi
 if [ ! -d $NDK_DIR ]; then
-    echo "NDK not found, exit."
+    echo -e "${ERR_COLOR}NDK not found, exit.${NO_COLOR}"
     exit 1
 fi
 
 ARCH=$2
 if [ -z $ARCH ]; then
-    echo "No arch specified, use arm."
+    echo -e "${WARNING_COLOR}No arch specified, use arm.${NO_COLOR}"
     ARCH='arm'
 fi
 
@@ -78,7 +86,7 @@ if [ $ARCH == 'arm' ]; then
 elif [ $ARCH == 'arm64' ]; then
     TOOLCHAIN='aarch64-linux-android-4.9'
 else
-    echo "$ARCH is not supported, exit."
+    echo -e "${ERR_COLOR}$ARCH is not supported, exit.${NO_COLOR}"
     exit 1
 fi
 
