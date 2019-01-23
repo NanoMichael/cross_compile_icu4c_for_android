@@ -1,12 +1,12 @@
-# CROSS BUILD ICU FOR ANDROID
+# Cross build icu4c for Android
 
-This document shows how to cross compile icu for Android (I use it to enable Chinese segmentation in SQLite3).
+This document shows how to cross-compile icu4c for Android (I use it to perform `multi-language words segmentation` in SQLite3), please read [the documentation](http://site.icu-project.org/home) to get more details about `icu`.
 
 The directory **icu** contains the source code of icu4c (version 58.2.0), you can replace it with the version you want.
 
-The directory **build** is the build result, **build/host** is the host build result, and **build/android/*arch*** is the target build result for Android, *arch* is the target arch you want to build.
+The directory **build** contains the build results, **build/host** is for host building, and **build/android/*[arch]*** contains the target build results for Android, *[arch]* is the target abi-architecture you want to build.
 
-# HOW TO USE
+# How to use
 
 Just run the following commands:
 
@@ -15,11 +15,11 @@ $ chmod +x build_icu.sh
 $ ./build_icu.sh <NDK_DIR> <TARGET_ARCH>
 ```
 
-**NDK_DIR** is your NDK toolchain directory, and **TARGET_ARCH** is the target arch you want to build, current support *arm* and *arm64*.
+**NDK_DIR** is your NDK toolchain directory, and **TARGET_ARCH** is the target abi-architecture you want to build, currently support `armv7` and `arm64`.
 
-You can find the libs builded in directory **build/andorid/arch/lib**.
+After all works done, you can find the libraries in the directory **build/andorid/[arch]/lib**.
 
-# LICENSE
+# License
 
 This project is under the [Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
