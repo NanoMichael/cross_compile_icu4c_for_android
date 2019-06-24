@@ -6,18 +6,22 @@ The directory **icu** contains the source code of icu4c (version 58.2.0), you ca
 
 The directory **build** contains the build results, **build/host** is for host building, and **build/android/*[arch]*** contains the target build results for Android, *[arch]* is the target abi-architecture you want to build.
 
+Currently only support linux* and darwin* OS.
+
 # How to use
 
 Just run the following commands:
 
 ```sh
-$ chmod +x build_icu.sh
-$ ./build_icu.sh <NDK_DIR> <TARGET_ARCH>
+$ chmod +x build_icu
+$ ./build_icu <TARGET_ARCH>
 ```
 
-**NDK_DIR** is your NDK toolchain directory, and **TARGET_ARCH** is the target abi-architecture you want to build, currently support `armv7` and `arm64`.
+**TARGET_ARCH** is the target abi-architecture you want to build, you can specify it with `arm` that corresponding to `armabi-v7a` or `arm64` that corresponding to `arm64-v8a`, the default is `arm`.
 
 After all works done, you can find the libraries in the directory **build/andorid/[arch]/lib**.
+
+Run `./build_icu -h` or `./build_icu --help` to show usages, and run `./build_icu -c` or `./build_icu --clean` to clear all build files.
 
 # License
 

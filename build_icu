@@ -1,0 +1,277 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOE
+
+Cross compile icu4c for Android, see README.md for details.
+
+Options: -h, --help  Print this message and exit
+         -c, --clean Clear all build files
+
+Usage:
+    First make sure you have ndk installed, currently only support linux* and darwin*
+    like OS.
+
+    Run the following commands to build:
+
+        chmod +x build_icu
+        ./build_icu <TARGET_ARCH>
+    
+    <TARGET_ARCH> is the target abi-architecture you want to build, you can specify
+    it with 'arm' that corresponding to 'armabi-v7a' or 'arm64' that corresponding
+    to 'arm64-v8a', the default is 'arm'.
+
+EOE
+
+    exit 0
+}
+
+# Clean all build files
+clean() {
+    while true; do
+        read -p "Do you wish to clean all build files (Y/N)? " yn
+        case $yn in
+        [Yy]* )
+            rm -rf build
+            rm -rf *-toolchain
+            break;;
+        * ) break;;
+        esac
+    done
+    exit 0
+}
+
+
+case "$1" in
+'-h'|'--help' )
+    usage
+    ;;
+'-c'|'--clean' )
+    clean
+    ;;
+esac
+
+
+# Check if ndk is installed
+ndk_dir=`dirname $(which ndk-build)`
+
+if [ $? -ne 0 ]; then
+    echo -e "${ERR_COLOR}NDK not installed, exit.${NO_COLOR}"
+    exit 1
+fi
+
+if [ -z $ndk_dir -o ! -d $ndk_dir ]; then
+    echo -e "${ERR_COLOR}NDK not found, exit.${NO_COLOR}"
+    exit 1
+fi
+
+ERR_COLOR='\033[1;31m'
+SUCESS_COLOR='\033[1;32m'
+WARNING_COLOR='\033[1;33m'
+NO_COLOR='\033[0m'
+
+os_name=linux
+build_type=Linux
+include_dir=/usr/include
+
+case $OSTYPE in
+darwin*)
+    os_name=darwin
+    build_type=MacOSX/GCC
+    include_dir=/usr/local/include
+    ;;
+linux*)
+    os_name=linux
+    build_type=Linux
+    include_dir=/usr/include
+    ;;
+*)
+    echo -e "${ERR_COLOR}${OSTYPE} is not supported, "
+        "currently only support darwin* and linux*, exit.${NO_COLOR}"
+    exit 1
+    ;;
+esac
+
+working_dir=`pwd`
+
+build_dir=$working_dir/build
+if [ ! -d "$build_dir" ]; then
+    mkdir $build_dir
+fi
+
+########################################## Build for host #####################################
+
+host_build=$build_dir/host
+
+buildHost() {
+    cd $host_build
+
+    export ICU_SOURCES=$working_dir/icu
+    export CPPFLAGS="-Os -fno-short-wchar -fno-short-enums \
+        -DU_USING_ICU_NAMESPACE=1 \
+        -DU_HAVE_NL_LANGINFO_CODESET=0 \
+        -D__STDC_INT64__ -DU_TIMEZONE=0 \
+        -DUCONFIG_NO_LEGACY_CONVERSION=1 \
+        -ffunction-sections -fdata-sections -fvisibility=hidden"
+    
+    if [ $os_name = "linux" ]; then
+        export LDFLAGS="-Wl,--gc-sections"
+    elif [ $os_name = "darwin" ]; then
+        # gcc on OSX does not support --gc-sections
+        export LDFLAGS="-Wl,-dead_strip"
+    fi
+
+    (exec $ICU_SOURCES/source/runConfigureICU $build_type \
+        --prefix=$host_build/icu_build --enable-extras=no \
+        --enable-strict=no -enable-static --enable-shared=no --enable-tests=no \
+        --enable-samples=no --enable-dyload=no)
+
+    make -j16
+    make install
+
+    if [ ! -d $host_build/icu_build/include/unicode ]; then
+        echo -e "${ERR_COLOR}Host build failed, exit.${NO_COLOR}"
+        exit 1
+    fi
+
+    cd $working_dir
+    return 0
+}
+
+checkInclude() {
+    from=$host_build/icu_build/include/unicode
+    if [ ! -d $from ]; then
+        echo -e "${ERR_COLOR}Host not build, exit.${NO_COLOR}"
+        exit 1
+    fi
+    target=$include_dir/unicode
+    if [ ! -d $target ]; then
+        echo "No icu includes found, copy..."
+        cp -r $from $include_dir
+    else
+        echo "Icu includes already exists."
+    fi
+}
+
+if [ -d $host_build/icu_build ]; then
+    echo "Host build already exists, use this one."
+else
+    echo "Build for host:"
+    mkdir $host_build
+    cd $host_build
+    buildHost
+    if test $? -ne 0; then
+        rm -r $host_build
+        echo -e "${ERR_COLOR}Can not build for host, exit.${NO_COLOR}"
+        exit 1
+    fi
+fi
+
+checkInclude
+
+###################################### Make standalone-toolchain #################################
+
+# See: https://developer.android.com/ndk/guides/standalone_toolchain
+# TODO upgrade: https://developer.android.com/ndk/guides/other_build_systems
+
+arch=$1
+if [ -z $arch ]; then
+    echo -e "${WARNING_COLOR}No arch specified, use arm.${NO_COLOR}"
+    arch='arm'
+fi
+
+toolchain=''
+if [ $arch = 'arm' ]; then
+    toolchain='arm-linux-androideabi-4.9'
+elif [ $arch = 'arm64' ]; then
+    toolchain='aarch64-linux-android-4.9'
+else
+    echo -e "${ERR_COLOR}$arch is not supported, exit.${NO_COLOR}"
+    exit 1
+fi
+
+toolchain_install_dir=$working_dir/$arch-toolchain/
+make_toolchain=$ndk_dir/build/tools/make-standalone-toolchain.sh
+
+# Check if toolchain is already exists
+if [ -d $toolchain_install_dir ]; then
+    echo "Use the toolchain already exists."
+else
+    echo "Install toolchain to ${toolchain_install_dir}"
+    (exec $make_toolchain \
+        --platform=android-21 \
+        --install_dir=$toolchain_install_dir \
+        --toolchain=$toolchain \
+        --arch=$arch \
+        --stl=gnustl)
+fi
+
+
+########################################## Build for Android #####################################
+
+android_build=$build_dir/android
+
+buildAndroid() {
+    arch_build=$android_build/$arch
+    target=$android_build/$arch/lib
+    if [ -d $target ]; then
+        echo "Arch '$arch' already builded, use this one."
+        return 0
+    fi
+
+    if [ ! -d $arch_build ]; then
+        mkdir $arch_build
+    fi
+    cd $arch_build
+
+    export ICU_SOURCES=$working_dir/icu
+    export ANDROIDVER=22
+    export AR=/usr/bin/ar
+    export ICU_CROSS_BUILD=$host_build
+    export NDK_STANDARD_ROOT=$toolchain_install_dir
+    export CPPFLAGS="-I$NDK_STANDARD_ROOT/sysroot/usr/include/ \
+        -Os -fno-short-wchar -DU_USING_ICU_NAMESPACE=1 -fno-short-enums \
+        -DU_HAVE_NL_LANGINFO_CODESET=0 -D__STDC_INT64__ -DU_TIMEZONE=0 \
+        -DUCONFIG_NO_LEGACY_CONVERSION=1 \
+        -ffunction-sections -fdata-sections -fvisibility=hidden"
+
+    export LDFLAGS="-lc -lstdc++ -Wl,--gc-sections,-rpath-link=$NDK_STANDARD_ROOT/sysroot/usr/lib/"
+
+    export PATH=$PATH:$NDK_STANDARD_ROOT/bin
+
+    host=''
+    if [ $arch = 'arm' ]; then
+        host='arm-linux-androideabi'
+    else
+        host='aarch64-linux-android'
+    fi
+
+    (exec $ICU_SOURCES/source/configure --with-cross-build=$ICU_CROSS_BUILD \
+        --enable-extras=no --enable-strict=no -enable-static --enable-shared=no \
+        --enable-tests=no --enable-samples=no --enable-dyload=no \
+        --host=$host --prefix=$PWD/icu_build)
+
+    make -j16
+    make install
+
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    cd $working_dir
+    return 0
+}
+
+if [ ! -d $android_build ]; then
+    mkdir $android_build
+fi
+
+buildAndroid
+
+if [ $? -ne 0 ]; then
+    echo -e "${ERR_COLOR}Cross build for Android failed, exit.${NO_COLOR}"
+    exit 1
+else
+    echo -e "${SUCESS_COLOR}Build success, congradulations!${NO_COLOR}"
+    echo -e "${SUCESS_COLOR}The libraries can be found at: $android_build/$arch/lib/${NO_COLOR}"
+fi
