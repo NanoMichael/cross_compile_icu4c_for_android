@@ -72,22 +72,20 @@ NO_COLOR='\033[0m'
 
 os_name=linux
 build_type=Linux
-include_dir=/usr/include
+include_dir=/usr/local/include
+lib_dir=/usr/local/lib
 
 case $OSTYPE in
 darwin*)
     os_name=darwin
     build_type=MacOSX/GCC
-    include_dir=/usr/local/include
     ;;
 linux*)
     os_name=linux
     build_type=Linux
-    include_dir=/usr/include
     ;;
 *)
-    echo -e "${ERR_COLOR}${OSTYPE} is not supported, "
-        "currently only support darwin* and linux*, exit.${NO_COLOR}"
+    echo -e "${ERR_COLOR}${OSTYPE} is not supported, currently only support darwin* and linux*, exit.${NO_COLOR}"
     exit 1
     ;;
 esac
@@ -103,7 +101,7 @@ fi
 
 host_build=$build_dir/host
 
-buildHost() {
+build_host() {
     cd $host_build
 
     export ICU_SOURCES=$working_dir/icu
@@ -121,6 +119,8 @@ buildHost() {
         export LDFLAGS="-Wl,-dead_strip"
     fi
 
+    # Set --prefix option to disable install to the system,
+    # since we only need the libraries and header files
     (exec $ICU_SOURCES/source/runConfigureICU $build_type \
         --prefix=$host_build/icu_build --enable-extras=no \
         --enable-strict=no -enable-static --enable-shared=no --enable-tests=no \
@@ -138,7 +138,7 @@ buildHost() {
     return 0
 }
 
-checkInclude() {
+copy_include() {
     from=$host_build/icu_build/include/unicode
     if [ ! -d $from ]; then
         echo -e "${ERR_COLOR}Host not build, exit.${NO_COLOR}"
@@ -153,13 +153,28 @@ checkInclude() {
     fi
 }
 
+copy_lib() {
+    from=$host_build/lib
+    if [ ! -d $from ]; then
+        echo -e "${ERR_COLOR}Host not build, exit.${NO_COLOR}"
+        exit 1
+    fi
+    test_one=$lib_dir/libicui18n.a
+    if [ ! -f $test_one ]; then
+        echo "No icu libs found, copy..."
+        cp -R $from/. $lib_dir/
+    else
+        echo "Icu libs already exists."
+    fi
+}
+
 if [ -d $host_build/icu_build ]; then
     echo "Host build already exists, use this one."
 else
     echo "Build for host:"
     mkdir $host_build
     cd $host_build
-    buildHost
+    build_host
     if test $? -ne 0; then
         rm -r $host_build
         echo -e "${ERR_COLOR}Can not build for host, exit.${NO_COLOR}"
@@ -167,7 +182,7 @@ else
     fi
 fi
 
-checkInclude
+copy_include; copy_lib
 
 ###################################### Make standalone-toolchain #################################
 
@@ -211,7 +226,7 @@ fi
 
 android_build=$build_dir/android
 
-buildAndroid() {
+build_android() {
     arch_build=$android_build/$arch
     target=$android_build/$arch/lib
     if [ -d $target ]; then
@@ -266,7 +281,7 @@ if [ ! -d $android_build ]; then
     mkdir $android_build
 fi
 
-buildAndroid
+build_android
 
 if [ $? -ne 0 ]; then
     echo -e "${ERR_COLOR}Cross build for Android failed, exit.${NO_COLOR}"
