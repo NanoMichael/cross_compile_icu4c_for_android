@@ -35,7 +35,9 @@ clean() {
             rm -rf build
             rm -rf *-toolchain
             break;;
-        * ) break;;
+        [Nn]* )
+            break;;
+        * ) ;;
         esac
     done
     exit 0
